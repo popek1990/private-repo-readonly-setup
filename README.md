@@ -1,5 +1,8 @@
 # Private Repo Read-Only Setup
 
+<img width="897" height="670" alt="image" src="https://github.com/user-attachments/assets/67b13e60-8bd2-496e-82f0-de5aebb2df25" />
+
+
 Prosty helper do ustawienia dostępu **read-only** do prywatnego repozytorium GitHub przez **SSH Deploy Key**.
 
 Repo służy do sytuacji, w której dwie osoby pracują nad prywatnymi projektami i chcą móc regularnie pobierać od siebie kod, ale bez ryzyka przypadkowego `push`, `merge` albo zmian w cudzym repo.
