@@ -35,3 +35,22 @@ Uruchom:
 
 ```bash
 python3 generate_readonly_key.py
+
+Skrypt:
+
+wyjaśni, co robi,
+utworzy klucz SSH,
+pokaże lokalizację klucza prywatnego i publicznego,
+wypisze public key do przekazania właścicielowi repo,
+pokaże instrukcję, co właściciel repo ma kliknąć na GitHubie.
+Ważne zasady bezpieczeństwa
+
+Nigdy nie wysyłaj nikomu klucza prywatnego.
+
+Przekazujesz tylko plik z końcówką:
+
+.pub
+
+Przykład:
+
+github_readonly_deploy_key.pub
