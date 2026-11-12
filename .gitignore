@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Keys belong in ~/.ssh, never in this repository.
+.ssh/
+github_readonly_deploy_key*
+id_ed25519*
+id_rsa*
+*.pem
+*.key
+*.pub
+.env

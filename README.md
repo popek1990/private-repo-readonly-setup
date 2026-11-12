@@ -1,153 +1,179 @@
 # Private Repo Read-Only Setup
 
-Prosty helper do ustawienia dostępu **read-only** do prywatnego repozytorium GitHub przez **SSH Deploy Key**.
+**Clone a private GitHub repository without granting push access.**
 
-Repo służy do sytuacji, w której dwie osoby pracują nad prywatnymi projektami i chcą móc regularnie pobierać od siebie kod, ale bez ryzyka przypadkowego `push`, `merge` albo zmian w cudzym repo.
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-<img width="897" height="670" alt="image" src="https://github.com/user-attachments/assets/67b13e60-8bd2-496e-82f0-de5aebb2df25" />
+A small Python helper that generates an SSH deploy key and walks you through
+setting up read-only access to one GitHub repository. Useful for code review,
+pulling code onto a server, or sharing a private project with another developer.
 
-## Problem
+- Generates an Ed25519 key pair locally using OpenSSH.
+- Prints the public key, instructions for the repository owner, and clone commands.
+- Saves the key choice in the clone so later fetches and pulls use it too.
+- Uses only the Python standard library. No packages or GitHub API token needed.
 
-Mamy prywatne repozytoria, które zmieniają się dynamicznie. Chcemy:
+> GitHub enforces read-only access when the owner adds the public key as a deploy
+> key with **Allow write access unchecked**. Running this helper alone does not
+> grant access or change repository permissions.
 
-- móc robić `git clone`, `git fetch`, `git pull` z repo drugiej osoby,
-- zachować prywatność repozytoriów,
-- nie dawać drugiej osobie prawa do zapisu,
-- uniknąć przypadkowego `push` do cudzego repo.
+## Quick start
 
-## Rozwiązanie
+Run this on the computer or server that needs access. You need **Python 3.10+**,
+**Git**, and **OpenSSH** (`ssh-keygen` and `ssh` available in your terminal).
 
-Używamy mechanizmu **Deploy Key** w GitHubie, ale w trybie **read-only**.
-
-Działa to tak:
-
-1. osoba, która ma dostać dostęp, generuje u siebie klucz SSH,
-2. klucz prywatny zostaje tylko na jej komputerze,
-3. klucz publiczny przekazuje właścicielowi repo,
-4. właściciel repo dodaje public key w GitHub:
-   `Settings → Deploy keys → Add deploy key`,
-5. właściciel repo **nie zaznacza** opcji `Allow write access`.
-
-Efekt:
-
-- repo pozostaje prywatne,
-- druga osoba może pobierać kod,
-- druga osoba nie może pushować do repo.
-
-## Kto uruchamia skrypt?
-
-Skrypt uruchamia **osoba, która ma dostać dostęp read-only**.
-
-Przykład:
-
-- kolega ma dostać dostęp do Twojego repo,
-- kolega uruchamia skrypt u siebie,
-- skrypt generuje mu klucz SSH,
-- kolega wysyła Ci tylko **public key**,
-- Ty dodajesz ten public key w swoim repo jako Deploy Key bez `Allow write access`.
-
-## Szybki start
-
-Wymagania:
-
-- Python 3,
-- `ssh-keygen`,
-- Git / OpenSSH.
-
-Uruchom:
+Linux, macOS, or Git Bash:
 
 ```bash
+git clone https://github.com/popek1990/private-repo-readonly-setup.git
+cd private-repo-readonly-setup
 python3 generate_readonly_key.py
 ```
 
-Na Windowsie możesz użyć:
+Windows PowerShell:
 
 ```powershell
+git clone https://github.com/popek1990/private-repo-readonly-setup.git
+cd private-repo-readonly-setup
 py generate_readonly_key.py
 ```
 
-Skrypt przeprowadzi Cię przez cały proces i wypisze:
+On Windows, PowerShell needs OpenSSH on `PATH`. Git Bash from Git for Windows is
+another option; use whichever Python launcher is installed (`python3`, `python`,
+or `py`).
 
-- gdzie zapisano klucz prywatny,
-- gdzie zapisano klucz publiczny,
-- który tekst trzeba przekazać właścicielowi repo,
-- gdzie właściciel repo ma wejść na GitHubie,
-- jak sklonować repo z użyciem wygenerowanego klucza.
+The helper asks for a key filename, a repository, and a comment. Press Enter to
+accept a default. The repository is optional; when provided, it can be
+`OWNER/REPO`, an HTTPS URL, or an SSH URL from GitHub.
 
-## Najważniejsza zasada
-
-Przekazujesz tylko plik z końcówką:
+Example session, with the output shortened and the public key omitted:
 
 ```text
-.pub
+SSH key filename [github_readonly_deploy_key]: review_laptop
+GitHub repository (OWNER/REPO or URL; optional) []: octocat/private-project
+SSH key comment [read-only-deploy-key:octocat/private-project]:
+
+Generating SSH key pair...
+...
+Private key: /home/alex/.ssh/review_laptop
+Public key:  /home/alex/.ssh/review_laptop.pub
+...
 ```
 
-Przykład:
+Keys are saved under `~/.ssh`. The helper refuses to overwrite an existing file;
+choose a different filename if you already have a key with that name.
 
-```text
-github_readonly_deploy_key.pub
-```
+## Give the public key to the repository owner
 
-Plik bez `.pub` to klucz prywatny. Tego pliku **nie wysyłasz nikomu**.
+Share the single `ssh-ed25519 ...` line printed by the helper, or the contents of
+the `.pub` file. **Keep the file without `.pub` on your own machine.**
 
-## Co ma zrobić właściciel repo?
+An administrator of the target repository then:
 
-Po otrzymaniu public key:
+1. Opens the repository on GitHub.
+2. Goes to **Settings > Deploy keys > Add deploy key**.
+3. Enters a descriptive title, such as `Review laptop (read-only)`.
+4. Pastes the public key into the **Key** field.
+5. Leaves **Allow write access unchecked** and clicks **Add key**.
 
-1. wejdź w prywatne repozytorium na GitHubie,
-2. kliknij `Settings`,
-3. kliknij `Deploy keys`,
-4. kliknij `Add deploy key`,
-5. wklej public key,
-6. **nie zaznaczaj** `Allow write access`,
-7. kliknij `Add key`.
+See GitHub's [deploy key documentation](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys)
+for details.
 
-## Co potem może robić osoba z dostępem?
+## Clone once, then fetch and pull
 
-Może:
+After the owner adds the key, copy the `git clone --config ...` command printed
+for your shell. If you left the repository blank, replace `OWNER/REPO` first.
+
+The command stores `core.sshCommand` in the new clone's local Git configuration.
+That keeps the key selection available for later commands. Inside the clone, run:
 
 ```bash
-git clone
 git fetch
-git pull
+git pull --ff-only
 ```
 
-Nie może:
+You can check read access with `git ls-remote origin`. GitHub rejects pushes
+authenticated with the read-only deploy key. You can still edit files and commit
+locally.
+
+The generated SSH command ignores SSH configuration files (`-F none`) to avoid
+offering other configured identities. If you use a custom SSH proxy, adapt the
+command to your setup. An existing `GIT_SSH_COMMAND` environment variable takes
+precedence over the saved setting; unset it before using these commands.
+
+The helper prints instructions. It does not connect to GitHub, register a deploy
+key, clone the target repository, or edit your global Git or SSH configuration.
+
+## Security and scope
+
+- Read-only access applies to this deploy key. Other SSH keys, tokens, or account
+  permissions may still allow writes. This tool is not a sandbox for a user or
+  process that already has other credentials.
+- Keys are generated **without a passphrase**. Anyone who obtains the private
+  file can use it. To add a passphrase, run `ssh-keygen -p -f PATH_TO_PRIVATE_KEY`
+  with your actual key path, quoted if it contains spaces. OpenSSH prompts for
+  the passphrase; you can use `ssh-agent` to avoid entering it on every pull.
+- Use a different key pair for each repository. GitHub deploy keys are scoped
+  to a single repository and cannot be reused across repositories.
+- Deploy keys do not expire automatically. Remove the key in the repository's
+  **Settings > Deploy keys** when access is no longer needed or the private key
+  is exposed. Removing a person's repository membership does not revoke a deploy key.
+- Keep private keys out of Git, issue reports, chat messages, and screenshots.
+  On Linux and macOS, the helper sets the new private key's permissions to `600`.
+  On Windows, access is governed by filesystem permissions; this helper does not
+  manage Windows ACLs.
+
+## Troubleshooting
+
+**`ssh-keygen was not found`**
+
+Install OpenSSH and open a new terminal. On Windows, you can also use Git Bash
+from Git for Windows. The helper checks for `ssh-keygen` before creating files.
+
+**`Permission denied (publickey)` or `Repository not found`**
+
+Check the repository name, ask the owner to confirm that they added this public
+key to that repository, and use the clone command printed by the helper.
+If you exported `GIT_SSH_COMMAND` earlier, remove it with `unset GIT_SSH_COMMAND`
+in Bash or `Remove-Item Env:GIT_SSH_COMMAND -ErrorAction SilentlyContinue` in
+PowerShell before retrying.
+
+**`Key is already in use` on GitHub**
+
+Generate a new pair with a different filename for this repository. Do not reuse
+an account key or a deploy key already assigned elsewhere.
+
+**The key filename already exists**
+
+Run the helper again with a new filename. Keep the old key until you know which
+repositories or services still use it.
+
+**SSH asks whether to trust GitHub's host key**
+
+Compare the fingerprint with
+[GitHub's published SSH fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints)
+before accepting it.
+
+## Contributing
+
+Bug reports and small, focused improvements are welcome. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for reporting and testing instructions.
+
+Run the tests without installing any Python packages:
 
 ```bash
-git push
+python3 -m unittest discover -s tests -v
 ```
 
-## Schemat
+Tests generate disposable keys in temporary directories and use local Git
+repositories. They do not need a GitHub account or access to a private repository.
+The GitHub Actions workflow is configured for Linux, macOS, and Windows.
 
-```text
-Osoba z dostępem read-only
-        │
-        │ generuje klucz SSH
-        ▼
-Klucz prywatny zostaje lokalnie
-Klucz publiczny trafia do właściciela repo
-        │
-        ▼
-GitHub → repo → Settings → Deploy keys
-        │
-        │ Allow write access = OFF
-        ▼
-Dostęp tylko do odczytu
-```
+If this helper saved you time, consider giving the repository a star.
 
-## Ważne ograniczenia
+## License
 
-- Skrypt nie łączy się z GitHub API.
-- Skrypt nie dodaje automatycznie Deploy Key do repo.
-- Właściciel repo nadal musi ręcznie wkleić public key w ustawieniach GitHuba.
-- Deploy Key jest przypisany do konkretnego repozytorium.
-- Dla kilku repozytoriów najlepiej wygenerować osobne klucze.
+[MIT](LICENSE).
 
-## Bezpieczeństwo
-
-Nie wrzucaj do tego repo żadnych realnych kluczy SSH.
-
-To repo zawiera tylko helper. Klucze generowane przez skrypt zapisują się lokalnie w katalogu `~/.ssh` osoby, która uruchamia skrypt.
-
-Jeśli klucz prywatny kiedykolwiek wycieknie, właściciel repo powinien usunąć odpowiadający mu Deploy Key z GitHuba.
+<!-- Documentation reviewed: 2026-11-12. -->
